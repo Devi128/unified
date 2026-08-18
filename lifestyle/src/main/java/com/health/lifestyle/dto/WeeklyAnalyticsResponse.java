@@ -1,5 +1,5 @@
 package com.health.lifestyle.dto;
-
+import java.util.List;
 public class WeeklyAnalyticsResponse {
 
     private double averageHealthScore;
@@ -8,7 +8,8 @@ public class WeeklyAnalyticsResponse {
     private double averageSleepScore;
 
     private int totalDaysTracked;
-
+    private List<DailyScoreResponse> weeklyScores;
+    
     // Getters & Setters
 
     public double getAverageHealthScore() {
@@ -49,5 +50,13 @@ public class WeeklyAnalyticsResponse {
 
     public void setTotalDaysTracked(int totalDaysTracked) {
         this.totalDaysTracked = totalDaysTracked;
+    }
+
+    public List<DailyScoreResponse> getWeeklyScores() {
+        return weeklyScores;
+    }
+
+    public void setWeeklyScores(List<DailyScoreResponse> weeklyScores) {
+        this.weeklyScores = weeklyScores;
     }
 }

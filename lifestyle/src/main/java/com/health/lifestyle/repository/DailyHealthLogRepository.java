@@ -6,12 +6,15 @@ import java.util.List;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import com.health.lifestyle.model.DailyHealthLog;
-public interface DailyHealthLogRepository 
+
+public interface DailyHealthLogRepository
         extends MongoRepository<DailyHealthLog, String> {
-                List<DailyHealthLog> findByUserIdAndDateBetween(
-        String userId,
-        LocalDate startDate,
-        LocalDate endDate);
+
+    List<DailyHealthLog> findByUserId(String userId);
+
+    // Find existing log for a specific user on a specific date
+    DailyHealthLog findByUserIdAndDate(
+            String userId,
+            LocalDate date
+    );
 }
-
-

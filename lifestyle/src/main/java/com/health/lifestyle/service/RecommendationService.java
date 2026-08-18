@@ -1,15 +1,19 @@
 package com.health.lifestyle.service;
 
 import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-
+import java.util.Locale;
+import java.util.Set;
+import com.health.lifestyle.dto.DailyScoreResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import java.util.Map;
 import com.health.lifestyle.dto.UnifiedLifestyleResponse;
+import com.health.lifestyle.dto.RecommendationExplanation;
 import com.health.lifestyle.dto.WeeklyAnalyticsResponse;
 import com.health.lifestyle.model.DailyHealthLog;
 import com.health.lifestyle.model.Disease;
@@ -17,6 +21,7 @@ import com.health.lifestyle.model.User;
 import com.health.lifestyle.repository.DailyHealthLogRepository;
 import com.health.lifestyle.repository.DiseaseRepository;
 import com.health.lifestyle.repository.UserRepository;
+
 @Service
 public class RecommendationService {
 
@@ -29,156 +34,438 @@ public class RecommendationService {
     @Autowired
     private DailyHealthLogRepository dailyHealthLogRepository;
 
-    // 🔥 STEP 9 – Unified Plan with Explainable Data
+    // 🔥 Unified Multi-Disease Recommendation
     public UnifiedLifestyleResponse getUnifiedPlan(String userId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found with ID: " + userId));
 
         List<String> userDiseaseNames = user.getDiseases();
 
         if (userDiseaseNames == null || userDiseaseNames.isEmpty()) {
-            throw new RuntimeException("User has no diseases assigned.");
+            throw new RuntimeException(
+                    "User has no diseases assigned.");
         }
 
-        Map<String, String> allowedFoods = new HashMap<>();
-        Map<String, String> avoidFoods = new HashMap<>();
-        Map<String, String> exercises = new HashMap<>();
-
+        // ✅ Using Set to avoid duplicates
+        Set<String> allowedFoods = new HashSet<>();
+        Set<String> avoidFoods = new HashSet<>();
+        Set<String> exercises = new HashSet<>();
+        List<RecommendationExplanation> explanationList = new ArrayList<>();
         List<String> sleepList = new ArrayList<>();
         List<String> stressList = new ArrayList<>();
-
+        // 🔥 Combine recommendations from multiple diseases
         for (String diseaseName : userDiseaseNames) {
 
-            Disease disease = diseaseRepository.findByName(diseaseName);
+            Disease disease =
+                    diseaseRepository.findByNameIgnoreCase(
+                            diseaseName);
 
+            // Skip if disease not found
             if (disease == null) {
-                throw new RuntimeException("Disease not found: " + diseaseName);
+                continue;
             }
 
-            if (disease.getAllowedFoods() != null)
-                allowedFoods.putAll(disease.getAllowedFoods());
+            // ✅ Allowed foods
+// ✅ Allowed foods
+        if (disease.getAllowedFoods() != null) {
 
-            if (disease.getAvoidFoods() != null)
-                avoidFoods.putAll(disease.getAvoidFoods());
+        allowedFoods.addAll(disease.getAllowedFoods());
 
-            if (disease.getRecommendedExercises() != null)
-                exercises.putAll(disease.getRecommendedExercises());
+        for (String food : disease.getAllowedFoods()) {
 
-            if (disease.getSleepGuidelines() != null)
-                sleepList.add(disease.getSleepGuidelines());
+                RecommendationExplanation exp =
+                        new RecommendationExplanation();
 
-            if (disease.getStressGuidelines() != null)
-                stressList.add(disease.getStressGuidelines());
+                exp.setItem(food);
+                exp.setType("Recommended Food");
+                exp.setReason(getFoodReason(food));
+
+                explanationList.add(exp);
+        }
+        }
+
+        // ✅ Avoid foods
+        if (disease.getAvoidFoods() != null) {
+
+        avoidFoods.addAll(disease.getAvoidFoods());
+
+        for (String food : disease.getAvoidFoods()) {
+
+                RecommendationExplanation exp =
+                        new RecommendationExplanation();
+
+                exp.setItem(food);
+                exp.setType("Avoid Food");
+                exp.setReason(getAvoidReason(food));
+
+                explanationList.add(exp);
+        }
+        }
+
+            // ✅ Exercises
+// ✅ Exercises
+        if (disease.getRecommendedExercises() != null) {
+
+        exercises.addAll(disease.getRecommendedExercises());
+
+        for (String ex : disease.getRecommendedExercises()) {
+
+                RecommendationExplanation exp =
+                        new RecommendationExplanation();
+
+                exp.setItem(ex);
+                exp.setType("Exercise");
+                exp.setReason(getExerciseReason(ex));
+
+                explanationList.add(exp);
+        }
+        }
+
+            // ✅ Sleep advice
+            if (disease.getSleepGuidelines() != null) {
+                sleepList.add(
+                        disease.getSleepGuidelines());
+            }
+
+            // ✅ Stress advice
+            if (disease.getStressGuidelines() != null) {
+                stressList.add(
+                        disease.getStressGuidelines());
+            }
         }
 
         // 🔥 Conflict Resolution
-        for (String avoid : avoidFoods.keySet()) {
-            allowedFoods.remove(avoid);
-        }
+        allowedFoods.removeAll(avoidFoods);
 
-        UnifiedLifestyleResponse response = new UnifiedLifestyleResponse();
-        response.setFinalAllowedFoods(allowedFoods);
-        response.setFinalAvoidFoods(avoidFoods);
-        response.setFinalExercises(exercises);
-        response.setSleepAdvice(String.join(" | ", sleepList));
-        response.setStressAdvice(String.join(" | ", stressList));
+        // ✅ Build final response
+        UnifiedLifestyleResponse response =
+                new UnifiedLifestyleResponse();
+
+        response.setFinalAllowedFoods(
+                allowedFoods);
+
+        response.setFinalAvoidFoods(
+                avoidFoods);
+
+        response.setFinalExercises(
+                exercises);
+
+        response.setSleepAdvice(
+                String.join(" | ", sleepList));
+
+        response.setStressAdvice(
+                String.join(" | ", stressList));
+
+        response.setExplanations(
+                explanationList);
 
         return response;
     }
 
-    // 🔥 STEP 10 – Tracking + Scoring (FIXED)
-    public DailyHealthLog trackDailyProgress(
-            String userId,
-            List<String> foodsConsumed,
-            List<String> exercisesDone,
-            int sleepHours) {
+    // 🔥 Daily Tracking + Health Scoring
+    // 🔥 Daily Tracking + Health Scoring
+public DailyHealthLog trackDailyProgress(
+        String userId,
+        List<String> foodsConsumed,
+        List<String> exercisesDone,
+        int sleepHours,
+        String selectedDate) {
 
-        UnifiedLifestyleResponse plan = getUnifiedPlan(userId);
+    UnifiedLifestyleResponse plan =
+            getUnifiedPlan(userId);
 
-        int dietScore = 0;
-        int exerciseScore = 0;
-        int sleepScore = 0;
+    int dietScore = 0;
+    int exerciseScore = 0;
+    int sleepScore = 0;
 
-        // ✅ FIXED: using containsKey()
-        if (foodsConsumed != null) {
-            for (String food : foodsConsumed) {
+    // ✅ Diet Score (0 - 35)
+    if (foodsConsumed != null && !foodsConsumed.isEmpty()) {
 
-                if (plan.getFinalAllowedFoods().containsKey(food))
-                    dietScore += 10;
+        int healthyFoods = 0;
 
-                if (plan.getFinalAvoidFoods().containsKey(food))
-                    dietScore -= 15;
+        for (String food : foodsConsumed) {
+
+            if (plan.getFinalAllowedFoods().contains(food)) {
+                healthyFoods++;
+            }
+
+            if (plan.getFinalAvoidFoods().contains(food)) {
+                dietScore -= 10;
             }
         }
 
-        if (exercisesDone != null) {
-            for (String ex : exercisesDone) {
-                if (plan.getFinalExercises().containsKey(ex))
-                    exerciseScore += 10;
+        dietScore += healthyFoods * 15;
+
+        if (dietScore > 35) {
+            dietScore = 35;
+        }
+
+        if (dietScore < 0) {
+            dietScore = 0;
+        }
+    }
+
+    // ✅ Exercise Score (0 - 35)
+    if (exercisesDone != null && !exercisesDone.isEmpty()) {
+
+        int matchedExercises = 0;
+
+        for (String ex : exercisesDone) {
+
+            if (plan.getFinalExercises().contains(ex)) {
+                matchedExercises++;
             }
         }
 
-        if (sleepHours >= 7 && sleepHours <= 8)
-            sleepScore = 20;
-        else if (sleepHours >= 6)
-            sleepScore = 10;
-        else
-            sleepScore = 5;
+        exerciseScore = matchedExercises * 18;
 
-        int overallScore = Math.max(0,
-                Math.min(100, dietScore + exerciseScore + sleepScore));
-
-        DailyHealthLog log = new DailyHealthLog();
-        log.setUserId(userId);
-        log.setDate(LocalDate.now());
-        log.setFoodsConsumed(foodsConsumed);
-        log.setExercisesDone(exercisesDone);
-        log.setSleepHours(sleepHours);
-        log.setDietScore(dietScore);
-        log.setExerciseScore(exerciseScore);
-        log.setSleepScore(sleepScore);
-        log.setOverallHealthScore(overallScore);
-
-        return dailyHealthLogRepository.save(log);
+        if (exerciseScore > 35) {
+            exerciseScore = 35;
+        }
     }
 
+    // ✅ Sleep Score (0 - 30)
+    if (sleepHours >= 7 && sleepHours <= 8) {
 
-public WeeklyAnalyticsResponse getWeeklyAnalytics(String userId) {
+        sleepScore = 30;
 
-    LocalDate today = LocalDate.now();
-    LocalDate weekStart = today.minusDays(6);
+    } else if (sleepHours >= 6) {
 
-    List<DailyHealthLog> logs =
-            dailyHealthLogRepository.findByUserIdAndDateBetween(
-                    userId, weekStart, today);
+        sleepScore = 20;
 
-    if (logs.isEmpty()) {
-        throw new RuntimeException("No tracking data available for this week.");
+    } else if (sleepHours >= 5) {
+
+        sleepScore = 10;
+
+    } else {
+
+        sleepScore = 0;
     }
 
-    double totalHealth = 0;
-    double totalDiet = 0;
-    double totalExercise = 0;
-    double totalSleep = 0;
+    // ✅ Final Score (0 - 100)
+    int overallScore =
+            dietScore +
+            exerciseScore +
+            sleepScore;
 
-    for (DailyHealthLog log : logs) {
-        totalHealth += log.getOverallHealthScore();
-        totalDiet += log.getDietScore();
-        totalExercise += log.getExerciseScore();
-        totalSleep += log.getSleepScore();
+    if (overallScore > 100) {
+        overallScore = 100;
+    }
+// ✅ Determine selected date
+LocalDate dateToSave;
+
+if (selectedDate != null && !selectedDate.isBlank()) {
+    dateToSave = LocalDate.parse(selectedDate);
+} else {
+    dateToSave = LocalDate.now();
+}
+
+// ✅ Check if a log already exists for this user and date
+DailyHealthLog log =
+        dailyHealthLogRepository.findByUserIdAndDate(
+                userId,
+                dateToSave
+        );
+
+// ✅ If not found, create a new one
+if (log == null) {
+    log = new DailyHealthLog();
+    log.setUserId(userId);
+    log.setDate(dateToSave);
+}
+
+// ✅ Update the log
+log.setFoodsConsumed(foodsConsumed);
+
+log.setExercisesDone(exercisesDone);
+
+log.setSleepHours(sleepHours);
+
+log.setDietScore(dietScore);
+
+log.setExerciseScore(exerciseScore);
+
+log.setSleepScore(sleepScore);
+
+log.setOverallHealthScore(overallScore);
+
+return dailyHealthLogRepository.save(log);
+}
+
+    // 🔥 Weekly Analytics
+    public WeeklyAnalyticsResponse
+    getWeeklyAnalytics(String userId) {
+
+        List<DailyHealthLog> logs =
+                dailyHealthLogRepository.findByUserId(userId);
+
+        logs.sort((a, b) ->
+                a.getDate().compareTo(b.getDate()));
+
+        if (logs.size() > 7) {
+
+        logs = logs.subList(
+                logs.size() - 7,
+                logs.size()
+        );
+        }
+
+        if (logs.isEmpty()) {
+
+    WeeklyAnalyticsResponse emptyResponse =
+            new WeeklyAnalyticsResponse();
+
+    emptyResponse.setAverageHealthScore(0);
+
+    emptyResponse.setAverageDietScore(0);
+
+    emptyResponse.setAverageExerciseScore(0);
+
+    emptyResponse.setAverageSleepScore(0);
+
+    emptyResponse.setTotalDaysTracked(0);
+
+    return emptyResponse;
+}
+        double totalHealth = 0;
+        double totalDiet = 0;
+        double totalExercise = 0;
+        double totalSleep = 0;
+
+        for (DailyHealthLog log : logs) {
+
+            totalHealth +=
+                    log.getOverallHealthScore();
+
+            totalDiet +=
+                    log.getDietScore();
+
+            totalExercise +=
+                    log.getExerciseScore();
+
+            totalSleep +=
+                    log.getSleepScore();
+        }
+
+        int days = logs.size();
+Map<LocalDate, List<Integer>> groupedScores = new LinkedHashMap<>();
+
+for (DailyHealthLog log : logs) {
+
+    groupedScores
+            .computeIfAbsent(
+                    log.getDate(),
+                    k -> new ArrayList<>())
+            .add(log.getOverallHealthScore());
+}
+
+        List<DailyScoreResponse> weeklyScores = new ArrayList<>();
+
+        for (Map.Entry<LocalDate, List<Integer>> entry : groupedScores.entrySet()) {
+
+        int total = 0;
+
+        for (int score : entry.getValue()) {
+                total += score;
+        }
+
+        int average = total / entry.getValue().size();
+
+        String day =
+                entry.getKey().getDayOfMonth()
+                + " "
+                + entry.getKey()
+                        .getMonth()
+                        .getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
+
+        weeklyScores.add(
+                new DailyScoreResponse(day, average)
+        );
+        }
+        WeeklyAnalyticsResponse response =
+                new WeeklyAnalyticsResponse();
+
+        response.setAverageHealthScore(
+                totalHealth / days);
+
+        response.setAverageDietScore(
+                totalDiet / days);
+
+        response.setAverageExerciseScore(
+                totalExercise / days);
+
+        response.setAverageSleepScore(
+                totalSleep / days);
+
+        response.setTotalDaysTracked(
+                days);
+        response.setWeeklyScores(weeklyScores);
+        return response;
     }
 
-    WeeklyAnalyticsResponse response = new WeeklyAnalyticsResponse();
+    // 🔥 Get Complete Health History
+        public List<DailyHealthLog> getHealthHistory(String userId) {
 
-    int days = logs.size();
+                return dailyHealthLogRepository.findByUserId(userId);
 
-    response.setAverageHealthScore(totalHealth / days);
-    response.setAverageDietScore(totalDiet / days);
-    response.setAverageExerciseScore(totalExercise / days);
-    response.setAverageSleepScore(totalSleep / days);
-    response.setTotalDaysTracked(days);
+        }
+        private String getFoodReason(String food) {
 
-    return response;
+    switch (food.toLowerCase()) {
+
+        case "vegetables":
+            return "Rich in vitamins and antioxidants that improve overall health.";
+
+        case "whole grains":
+            return "Provide slow-release energy and help regulate blood sugar.";
+
+        case "lean protein":
+            return "Supports muscle health and improves metabolism.";
+
+        case "high fiber foods":
+            return "Improves digestion and helps control blood sugar.";
+
+        default:
+            return "Recommended as part of a healthy lifestyle.";
+    }
+}
+
+private String getAvoidReason(String food) {
+
+    switch (food.toLowerCase()) {
+
+        case "sugary foods":
+            return "May increase blood sugar and worsen symptoms.";
+
+        case "processed carbs":
+            return "Can contribute to insulin resistance.";
+
+        case "soft drinks":
+            return "Contain excess sugar with very little nutritional value.";
+
+        default:
+            return "Avoid to better manage your health condition.";
+    }
+}
+
+private String getExerciseReason(String exercise) {
+
+    switch (exercise.toLowerCase()) {
+
+        case "walking":
+            return "Improves heart health and insulin sensitivity.";
+
+        case "yoga":
+            return "Reduces stress and improves flexibility.";
+
+        case "strength training":
+            return "Builds muscle and supports healthy metabolism.";
+
+        default:
+            return "Recommended for maintaining overall fitness.";
+    }
 }
 }

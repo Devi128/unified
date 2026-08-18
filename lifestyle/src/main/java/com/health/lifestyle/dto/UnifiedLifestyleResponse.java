@@ -1,39 +1,43 @@
 package com.health.lifestyle.dto;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Set;
 
 public class UnifiedLifestyleResponse {
 
-    private Map<String, String> finalAllowedFoods;
-    private Map<String, String> finalAvoidFoods;
-    private Map<String, String> finalExercises;
+    private Set<String> finalAllowedFoods;
+    private Set<String> finalAvoidFoods;
+    private Set<String> finalExercises;
 
     private String sleepAdvice;
     private String stressAdvice;
 
-    // --- Getters & Setters ---
+    // ⭐ NEW: Explanation List
+    private List<RecommendationExplanation> explanations;
 
-    public Map<String, String> getFinalAllowedFoods() {
+    // ---------------- Getters & Setters ----------------
+
+    public Set<String> getFinalAllowedFoods() {
         return finalAllowedFoods;
     }
 
-    public void setFinalAllowedFoods(Map<String, String> finalAllowedFoods) {
+    public void setFinalAllowedFoods(Set<String> finalAllowedFoods) {
         this.finalAllowedFoods = finalAllowedFoods;
     }
 
-    public Map<String, String> getFinalAvoidFoods() {
+    public Set<String> getFinalAvoidFoods() {
         return finalAvoidFoods;
     }
 
-    public void setFinalAvoidFoods(Map<String, String> finalAvoidFoods) {
+    public void setFinalAvoidFoods(Set<String> finalAvoidFoods) {
         this.finalAvoidFoods = finalAvoidFoods;
     }
 
-    public Map<String, String> getFinalExercises() {
+    public Set<String> getFinalExercises() {
         return finalExercises;
     }
 
-    public void setFinalExercises(Map<String, String> finalExercises) {
+    public void setFinalExercises(Set<String> finalExercises) {
         this.finalExercises = finalExercises;
     }
 
@@ -51,5 +55,14 @@ public class UnifiedLifestyleResponse {
 
     public void setStressAdvice(String stressAdvice) {
         this.stressAdvice = stressAdvice;
+    }
+
+    // ⭐ NEW
+    public List<RecommendationExplanation> getExplanations() {
+        return explanations;
+    }
+
+    public void setExplanations(List<RecommendationExplanation> explanations) {
+        this.explanations = explanations;
     }
 }

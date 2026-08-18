@@ -7,6 +7,9 @@ public class TrackRequest {
     private List<String> foodsConsumed;
     private List<String> exercisesDone;
     private int sleepHours;
+    private String date;
+    
+    // Getters & Setters
 
     public List<String> getFoodsConsumed() {
         return foodsConsumed;
@@ -31,4 +34,11 @@ public class TrackRequest {
     public void setSleepHours(int sleepHours) {
         this.sleepHours = sleepHours;
     }
+    public String getDate() {
+    return date;
+}
+
+public void setDate(String date) {
+    this.date = date;
+}
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
 @Document(collection = "users")
 public class User {
 
@@ -12,6 +13,8 @@ public class User {
 
     private String name;
     private String email;
+    private String password;   // ✅ Added
+
     private int age;
     private String gender;
 
@@ -39,6 +42,16 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    // ✅ Added
+    public String getPassword() {
+        return password;
+    }
+
+    // ✅ Added
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public int getAge() {
